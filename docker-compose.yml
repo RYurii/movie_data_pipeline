@@ -1,0 +1,101 @@
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.11.2
+  env_file:
+    - .env
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/dags
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    PYTHONPATH: /opt/airflow/project
+    _PIP_ADDITIONAL_REQUIREMENTS: "clickhouse-connect==0.8.15 requests==2.32.3 python-dotenv==1.0.1"
+  volumes:
+    - ./:/opt/airflow/project
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ./config:/opt/airflow/config
+  depends_on:
+    - postgres
+    - clickhouse
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: movie_airflow_postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: movie_clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: movie_analytics
+      CLICKHOUSE_USER: admin
+      CLICKHOUSE_PASSWORD: admin123
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+
+  streamlit:
+    image: python:3.11-slim
+    container_name: movie_streamlit
+    working_dir: /opt/airflow/project
+    volumes:
+      - ./:/opt/airflow/project
+    ports:
+      - "8501:8501"
+    depends_on:
+      - clickhouse
+    command: >
+      sh -c "pip install streamlit pandas clickhouse-connect &&
+             streamlit run streamlit_app/app.py
+             --server.address=0.0.0.0
+             --server.port=8501"
+
+  airflow-init:
+    <<: *airflow-common
+    user: "${AIRFLOW_UID:-50000}:0"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate && \
+        airflow users create \
+          --username admin \
+          --password admin \
+          --firstname Airflow \
+          --lastname Admin \
+          --role Admin \
+          --email admin@example.com || true
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: movie_airflow_webserver
+    user: "${AIRFLOW_UID:-50000}:0"
+    command: webserver
+    ports:
+      - "8080:8080"
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: movie_airflow_scheduler
+    user: "${AIRFLOW_UID:-50000}:0"
+    command: scheduler
+
+volumes:
+  postgres_data:
+  clickhouse_data:

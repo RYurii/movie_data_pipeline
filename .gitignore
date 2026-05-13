@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+
+# Virtual env
+venv/
+.venv/
+
+# Environment variables
+.env
+
+# Airflow
+logs/
+airflow.db
+
+# Docker volumes / local databases
+clickhouse_data/
+postgres_data/
+
+# Mac / Linux / Windows
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Streamlit cache
+.streamlit/
+
+# Testing
+.pytest_cache/
+
+# Misc
+*.log
