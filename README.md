@@ -116,7 +116,7 @@ http://localhost:8501
 ### 1. Clone repository
 
 ```bash
-git clone <your_repo_url>
+git clone https://github.com/RYurii/movie_data_pipeline.git
 cd movie_data_pipeline
 ```
 
