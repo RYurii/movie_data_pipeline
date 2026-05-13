@@ -9,19 +9,11 @@ from src.utils.data_quality import (
     validate_mart_layer,
     validate_raw_layer,
 )
-from src.utils.sql_runner import run_sql_file
-
-
-def refresh_clean_table():
-    run_sql_file("sql/clean/refresh_clean_tmdb_trending_movies.sql")
-
-
-def refresh_mart_table():
-    run_sql_file("sql/marts/refresh_mart_top_movies.sql")
-
-
-def refresh_mart_movie_potential_table():
-    run_sql_file("sql/marts/refresh_mart_movie_potential.sql")
+from src.utils.refresh_tables import (
+    refresh_clean_table,
+    refresh_mart_movie_potential_table,
+    refresh_mart_table,
+)
 
 
 with DAG(
@@ -68,7 +60,5 @@ with DAG(
     )
 
     load_raw >> validate_raw >> refresh_clean >> validate_clean
-
     validate_clean >> [refresh_mart, refresh_mart_movie_potential]
-
     [refresh_mart, refresh_mart_movie_potential] >> validate_marts
